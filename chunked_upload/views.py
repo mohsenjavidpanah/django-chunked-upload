@@ -212,7 +212,7 @@ class ChunkedUploadView(ChunkedUploadBaseView):
                 status=http_status.HTTP_400_BAD_REQUEST,
                 detail='Size of file exceeds the limit (%s bytes)' % max_bytes
             )
-        if chunked_upload.offset != start:
+        if False and chunked_upload.offset != start:
             raise ChunkedUploadError(status=http_status.HTTP_400_BAD_REQUEST,
                                      detail='Offsets do not match',
                                      offset=chunked_upload.offset)
