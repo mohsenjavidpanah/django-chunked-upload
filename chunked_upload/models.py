@@ -58,8 +58,8 @@ class AbstractChunkedUpload(models.Model):
             storage.delete(path)
 
     def __str__(self):
-        return u'<%s - upload_id: %s - bytes: %s - status: %s>' % (
-            self.filename, self.upload_id, self.offset, self.status)
+        return u'<%s - upload_id: %s - status: %s>' % (
+            self.filename, self.upload_id, self.status)
 
     def update_chunk(self, chunk, start, end, save=True):
         self.file.close()
@@ -81,8 +81,9 @@ class AbstractChunkedUpload(models.Model):
     def get_uploaded_file(self):
         self.file.close()
         self.file.open(mode='rb')  # mode = read+binary
+        file_size = os.path.getsize(self.file.path)
         return UploadedFile(file=self.file, name=self.filename,
-                            size=self.offset)
+                            size=file_size)
 
     class Meta:
         abstract = True
