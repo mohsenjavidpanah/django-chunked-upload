@@ -4,6 +4,7 @@ from django.views.generic import View
 from django.shortcuts import get_object_or_404
 from django.core.files.base import ContentFile
 from django.utils import timezone
+from django.db import transaction
 
 from .settings import MAX_BYTES
 from .models import ChunkedUpload
@@ -177,49 +178,50 @@ class ChunkedUploadView(ChunkedUploadBaseView):
                                      detail='No chunk file was submitted')
         self.validate(request)
 
-        upload_id = request.POST.get('upload_id')
-        if upload_id:
-            chunked_upload = get_object_or_404(
-                self.get_queryset(request).select_for_update(),
-                upload_id=upload_id
-            )
-            self.is_valid_chunked_upload(chunked_upload)
-        else:
-            attrs = {'filename': chunk.name}
+        with transaction.atomic():
+            upload_id = request.POST.get('upload_id')
+            if upload_id:
+                chunked_upload = get_object_or_404(
+                    self.get_queryset(request).select_for_update(),
+                    upload_id=upload_id
+                )
+                self.is_valid_chunked_upload(chunked_upload)
+            else:
+                attrs = {'filename': chunk.name}
 
-            attrs.update(self.get_extra_attrs(request))
-            chunked_upload = self.create_chunked_upload(save=False, **attrs)
+                attrs.update(self.get_extra_attrs(request))
+                chunked_upload = self.create_chunked_upload(save=False, **attrs)
 
-        content_range = request.META.get(self.content_range_header, '')
-        match = self.content_range_pattern.match(content_range)
-        if match:
-            start = int(match.group('start'))
-            end = int(match.group('end'))
-            total = int(match.group('total'))
-        elif self.fail_if_no_header:
-            raise ChunkedUploadError(status=http_status.HTTP_400_BAD_REQUEST,
-                                     detail='Error in request headers')
-        else:
-            # Use the whole size when HTTP_CONTENT_RANGE is not provided
-            start = 0
-            end = chunk.size - 1
-            total = chunk.size
+            content_range = request.META.get(self.content_range_header, '')
+            match = self.content_range_pattern.match(content_range)
+            if match:
+                start = int(match.group('start'))
+                end = int(match.group('end'))
+                total = int(match.group('total'))
+            elif self.fail_if_no_header:
+                raise ChunkedUploadError(status=http_status.HTTP_400_BAD_REQUEST,
+                                         detail='Error in request headers')
+            else:
+                # Use the whole size when HTTP_CONTENT_RANGE is not provided
+                start = 0
+                end = chunk.size - 1
+                total = chunk.size
 
-        chunk_size = end - start + 1
-        max_bytes = self.get_max_bytes(request)
+            chunk_size = end - start + 1
+            max_bytes = self.get_max_bytes(request)
 
-        if max_bytes is not None and total > max_bytes:
-            raise ChunkedUploadError(
-                status=http_status.HTTP_400_BAD_REQUEST,
-                detail='Size of file exceeds the limit (%s bytes)' % max_bytes
-            )
-        if chunk.size != chunk_size:
-            raise ChunkedUploadError(status=http_status.HTTP_400_BAD_REQUEST,
-                                     detail="File size doesn't match headers")
+            if max_bytes is not None and total > max_bytes:
+                raise ChunkedUploadError(
+                    status=http_status.HTTP_400_BAD_REQUEST,
+                    detail='Size of file exceeds the limit (%s bytes)' % max_bytes
+                )
+            if chunk.size != chunk_size:
+                raise ChunkedUploadError(status=http_status.HTTP_400_BAD_REQUEST,
+                                         detail="File size doesn't match headers")
 
-        chunked_upload.update_chunk(chunk, start=start, end=end, save=False)
+            chunked_upload.update_chunk(chunk, start=start, end=end, save=False)
 
-        self._save(chunked_upload)
+            self._save(chunked_upload)
 
         return Response(self.get_response_data(chunked_upload, request),
                         status=http_status.HTTP_200_OK)

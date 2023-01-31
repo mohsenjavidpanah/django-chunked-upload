@@ -67,7 +67,7 @@ class AbstractChunkedUpload(models.Model):
         file_size = os.path.getsize(self.file.path)
         with open(self.file.path, mode='rb+') as file_obj:  # mode = write+binary
             if start > file_size:
-                file_obj.seek(file_size - 1)
+                file_obj.seek(file_size)
                 file_obj.write(b' ' * (start - file_size))
 
             file_obj.seek(start)
