@@ -23,7 +23,6 @@ class Migration(migrations.Migration):
                  models.CharField(default=chunked_upload.models.generate_upload_id, editable=False, max_length=32, unique=True)),
                 ('file', models.FileField(max_length=255, upload_to=chunked_upload.settings.UPLOAD_TO)),
                 ('filename', models.CharField(max_length=255)),
-                ('offset', models.BigIntegerField(default=0)),
                 ('created_on', models.DateTimeField(auto_now_add=True)),
                 ('status', models.PositiveSmallIntegerField(choices=[(1, 'Uploading'), (2, 'Complete')], default=1)),
                 ('completed_on', models.DateTimeField(blank=True, null=True)),
