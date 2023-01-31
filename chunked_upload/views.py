@@ -220,7 +220,7 @@ class ChunkedUploadView(ChunkedUploadBaseView):
             raise ChunkedUploadError(status=http_status.HTTP_400_BAD_REQUEST,
                                      detail="File size doesn't match headers")
 
-        chunked_upload.append_chunk(chunk, chunk_size=chunk_size, save=False)
+        chunked_upload.update_chunk(chunk, start=start, end=end, save=False)
 
         self._save(chunked_upload)
 
