@@ -179,8 +179,10 @@ class ChunkedUploadView(ChunkedUploadBaseView):
 
         upload_id = request.POST.get('upload_id')
         if upload_id:
-            chunked_upload = get_object_or_404(self.get_queryset(request),
-                                               upload_id=upload_id)
+            chunked_upload = get_object_or_404(
+                self.get_queryset(request).select_for_update(),
+                upload_id=upload_id
+            )
             self.is_valid_chunked_upload(chunked_upload)
         else:
             attrs = {'filename': chunk.name}
